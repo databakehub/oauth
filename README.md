@@ -1,2 +1,5 @@
-# oauth
-OAuth2 for Golang webservices
+# OAuth
+---
+
+> OAuth2.0 for Golang webservices with persistent sessions with TTL
+
