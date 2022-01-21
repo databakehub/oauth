@@ -122,7 +122,6 @@ func (o *OAuth) AuthCheckHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	v, err := o.Rcfg.Get(o.SessionName, t)
-	log.Println("AuthCheck Session fetched: " + v)
 	if err != nil || v == "" {
 		errorHttpForbidden(w, fmt.Errorf("invalid session: %s", err))
 		return
@@ -133,12 +132,12 @@ func (o *OAuth) AuthCheckHandler(w http.ResponseWriter, req *http.Request) {
 		errorHttpForbidden(w, fmt.Errorf("session parse error: %s", err))
 		return
 	}
-	b, err := sessionSchemaToJson(ss)
+	b, err := json.Marshal(ss)
 	if err != nil {
 		errorHttpForbidden(w, fmt.Errorf("session marshal error: %s", err))
 		return
 	}
-	w.Write([]byte(b))
+	w.Write(b)
 }
 
 func errorHttpForbidden(w http.ResponseWriter, err error) {
