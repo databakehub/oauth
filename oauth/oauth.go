@@ -19,7 +19,6 @@ import (
 )
 
 const (
-	rcfgUrl      = "http://localhost:2222"
 	authCallback = "/authcallback"
 	authPath     = "/auth"
 )
@@ -44,7 +43,13 @@ type SessionSchema struct {
 	DbId     string `json:"db_id,omitempty"`
 }
 
-func SetupOauth(sessionName string, secrets map[string]OAuthCredentials, hostAddress string, redirectTo string) *OAuth {
+func NewOauth(
+	rcfgUrl,
+	sessionName string,
+	secrets map[string]OAuthCredentials,
+	hostAddress string,
+	redirectTo string,
+	ttl string) *OAuth { // ttl is in minutes
 	rand.Seed(time.Now().UnixNano())
 
 	oauth := &OAuth{
