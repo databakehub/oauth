@@ -107,7 +107,11 @@ func (o *OAuth) CallbackHandler(w http.ResponseWriter, req *http.Request) {
 			o.Rcfg.SetWithTTL(o.SessionName, token, json, "5")
 		}
 	}
-	http.Redirect(w, req, o.RedirectTo+"?oauth_token="+token, http.StatusTemporaryRedirect)
+	if token == "" {
+		http.Redirect(w, req, o.RedirectTo, http.StatusTemporaryRedirect)
+	} else {
+		http.Redirect(w, req, o.RedirectTo+"?oauth_token="+token, http.StatusTemporaryRedirect)
+	}
 }
 
 func (o *OAuth) AuthCheckHandler(w http.ResponseWriter, req *http.Request) {
