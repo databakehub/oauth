@@ -128,11 +128,13 @@ func (o *OAuth) AuthCheckHandler(w http.ResponseWriter, req *http.Request) {
 	}
 	// write v to response
 	ss, err := parseSessionSchemaFromJson(v)
+	log.Println("Session parsed", ss)
 	if err != nil {
 		errorHttpForbidden(w, fmt.Errorf("session parse error: %s", err))
 		return
 	}
 	b, err := json.Marshal(ss)
+	log.Println("Session marshalled", string(b))
 	if err != nil {
 		errorHttpForbidden(w, fmt.Errorf("session marshal error: %s", err))
 		return
@@ -141,7 +143,8 @@ func (o *OAuth) AuthCheckHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 func errorHttpForbidden(w http.ResponseWriter, err error) {
-	http.Error(w, fmt.Sprintf(`{"error": "%s"}`, err.Error()), http.StatusForbidden)
+	w.WriteHeader(http.StatusForbidden)
+	w.Write([]byte(fmt.Sprintf(`{"error": "%s"}`, err.Error())))
 }
 
 func (x *OAuth) SetupMuxRouter(r *mux.Router) {
