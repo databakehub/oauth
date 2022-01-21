@@ -117,18 +117,17 @@ func (o *OAuth) AuthCheckHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	// write v to response
-	var ss SessionSchema
-	err = json.Unmarshal([]byte(v), &ss)
+	ss, err := parseSessionSchemaFromJson(v)
 	if err != nil {
 		errorHttpForbidden(w, fmt.Errorf("session parse error: %s", err))
 		return
 	}
-	b, err := json.Marshal(ss)
+	b, err := sessionSchemaToJson(ss)
 	if err != nil {
 		errorHttpForbidden(w, fmt.Errorf("session marshal error: %s", err))
 		return
 	}
-	w.Write(b)
+	w.Write([]byte(b))
 }
 
 func errorHttpForbidden(w http.ResponseWriter, err error) {
@@ -139,6 +138,14 @@ func (x *OAuth) SetupMuxRouter(r *mux.Router) {
 	r.HandleFunc("/auth/{provider}", x.AuthHandler).Methods("GET")
 	r.HandleFunc("/authcallback", x.CallbackHandler).Methods("GET")
 	r.HandleFunc("/authcheck/{token}", x.AuthCheckHandler).Methods("GET")
+}
+
+func (x *OAuth) GetSessionSchema(token string) (*SessionSchema, error) {
+	s, err := x.Rcfg.Get(x.SessionName, token)
+	if err != nil {
+		return nil, err
+	}
+	return parseSessionSchemaFromJson(s)
 }
 
 func extractSessionSchemaFromGoth(user goth.User) *SessionSchema {
