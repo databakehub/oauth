@@ -122,6 +122,7 @@ func (o *OAuth) AuthCheckHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	v, err := o.Rcfg.Get(o.SessionName, t)
+	log.Println("AuthCheck Session fetched: " + v)
 	if err != nil || v == "" {
 		errorHttpForbidden(w, fmt.Errorf("invalid session: %s", err))
 		return
