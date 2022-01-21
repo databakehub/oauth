@@ -12,6 +12,7 @@ import (
 	rcfg "github.com/databakehub/rcfg-client-go"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/securecookie"
+	"github.com/gorilla/sessions"
 	"github.com/markbates/goth"
 	"github.com/markbates/goth/gothic"
 	"github.com/markbates/goth/providers/facebook"
@@ -64,16 +65,16 @@ func NewOauth(
 }
 
 func (o *OAuth) setupGoth() {
-	// key := string(securecookie.GenerateRandomKey(10))
-	// maxAge := 86400 * 2 // 2 days
-	// isProd := false     // Set to true when serving over https
+	key := string(securecookie.GenerateRandomKey(10))
+	maxAge := 86400 * 2 // 2 days
+	isProd := true      // Set to true when serving over https
 
-	// store := sessions.NewCookieStore([]byte(key))
-	// store.MaxAge(maxAge)
-	// store.Options.Path = "/"
-	// store.Options.HttpOnly = true // HttpOnly should always be enabled
-	// store.Options.Secure = isProd
-	// gothic.Store = store
+	store := sessions.NewCookieStore([]byte(key))
+	store.MaxAge(maxAge)
+	store.Options.Path = "/"
+	store.Options.HttpOnly = true // HttpOnly should always be enabled
+	store.Options.Secure = isProd
+	gothic.Store = store
 
 	callback := o.HostAddress + authCallback
 	goog, ok := o.Secrets["google"]
@@ -96,7 +97,7 @@ func (o *OAuth) CallbackHandler(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		log.Println(err)
 	} else {
-		token = string(securecookie.GenerateRandomKey(10))
+		token = generateRandomString(10)
 		log.Println("Random string gen: " + token)
 		ss := extractSessionSchemaFromGoth(user)
 		json, err := sessionSchemaToJson(ss)
@@ -181,4 +182,13 @@ func parseSessionSchemaFromJson(s string) (*SessionSchema, error) {
 		return nil, err
 	}
 	return ss, nil
+}
+
+func generateRandomString(l int) string {
+	availableChars := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+	b := make([]rune, l)
+	for i := range b {
+		b[i] = availableChars[rand.Intn(len(availableChars))]
+	}
+	return string(b)
 }
