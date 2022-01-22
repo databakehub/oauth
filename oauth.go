@@ -117,11 +117,13 @@ func (o *OAuth) CallbackHandler(w http.ResponseWriter, req *http.Request) {
 func (o *OAuth) AuthCheckHandler(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 	t, ok := vars["token"]
+	log.Println("Token: " + t)
 	if !ok {
 		errorHttpForbidden(w, fmt.Errorf("missing token in path /authcheck/{token}"))
 		return
 	}
 	v, err := o.Rcfg.Get(o.SessionName, t)
+	log.Println("Rcfg value: " + v)
 	if err != nil || v == "" {
 		errorHttpForbidden(w, fmt.Errorf("invalid session: %s", err))
 		return
