@@ -30,6 +30,7 @@ type OAuth struct {
 	SessionName string
 	Secrets     map[string]OAuthCredentials
 	RedirectTo  string
+	TTL         string
 }
 
 type OAuthCredentials struct {
@@ -59,6 +60,7 @@ func NewOauth(
 		SessionName: sessionName,
 		Secrets:     secrets,
 		RedirectTo:  redirectTo,
+		TTL:         ttl,
 	}
 	oauth.setupGoth()
 	return oauth
@@ -104,7 +106,7 @@ func (o *OAuth) CallbackHandler(w http.ResponseWriter, req *http.Request) {
 		if err != nil {
 			log.Println(err)
 		} else {
-			o.Rcfg.SetWithTTL(o.SessionName, token, json, "5")
+			o.Rcfg.SetWithTTL(o.SessionName, token, json, o.TTL)
 		}
 	}
 	if token == "" {
@@ -144,15 +146,45 @@ func (o *OAuth) AuthCheckHandler(w http.ResponseWriter, req *http.Request) {
 	w.Write(b)
 }
 
-func errorHttpForbidden(w http.ResponseWriter, err error) {
-	w.WriteHeader(http.StatusForbidden)
-	w.Write([]byte(fmt.Sprintf(`{"error": "%s"}`, err.Error())))
-}
-
 func (x *OAuth) SetupMuxRouter(r *mux.Router) {
 	r.HandleFunc("/auth/{provider}", x.AuthHandler).Methods("GET")
 	r.HandleFunc("/authcallback", x.CallbackHandler).Methods("GET")
 	r.HandleFunc("/authcheck/{token}", x.AuthCheckHandler).Methods("GET")
+}
+
+func (x *OAuth) SetDbIdForToken(token string, dbId string) error {
+	v, err := x.Rcfg.Get(x.SessionName, token)
+	if err != nil {
+		return err
+	}
+	ss, err := parseSessionSchemaFromJson(v)
+	if err != nil {
+		return err
+	}
+	ss.DbId = dbId
+	json, err := sessionSchemaToJson(ss)
+	if err != nil {
+		return err
+	}
+	x.Rcfg.SetWithTTL(x.SessionName, token, json, x.TTL)
+	return nil
+}
+
+func (x *OAuth) AuthCheck(w http.ResponseWriter, req *http.Request) (*SessionSchema, error) {
+	token := req.Header.Get("Authorization")
+	if token == "" {
+		e := fmt.Errorf("no oauth token")
+		errorHttpForbidden(w, e)
+		return nil, e
+	}
+	ss, err := x.GetSessionSchema(token)
+	if err != nil {
+		log.Println("Auth check error: ", err)
+		e := fmt.Errorf("do I know you? " + err.Error())
+		errorHttpForbidden(w, e)
+		return nil, e
+	}
+	return ss, err
 }
 
 func (x *OAuth) GetSessionSchema(token string) (*SessionSchema, error) {
@@ -180,7 +212,17 @@ func sessionSchemaToJson(s *SessionSchema) (string, error) {
 	return url.QueryEscape(string(b)), nil
 }
 
-func parseSessionSchemaFromJson(s string) (*SessionSchema, error) {
+func parseSessionSchemaFromJson(tokenSession string) (*SessionSchema, error) {
+	mapS := make(map[string]string)
+	err := json.Unmarshal([]byte(tokenSession), &mapS)
+	if err != nil {
+		return nil, err
+	}
+	s := ""
+	for k := range mapS {
+		s = mapS[k]
+		break
+	}
 	ss := &SessionSchema{}
 	un, err := url.QueryUnescape(s)
 	if err != nil {
@@ -200,4 +242,9 @@ func generateRandomString(l int) string {
 		b[i] = availableChars[rand.Intn(len(availableChars))]
 	}
 	return string(b)
+}
+
+func errorHttpForbidden(w http.ResponseWriter, err error) {
+	w.WriteHeader(http.StatusForbidden)
+	w.Write([]byte(fmt.Sprintf(`{"error": "%s"}`, err.Error())))
 }
