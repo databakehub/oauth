@@ -1,6 +1,7 @@
 package oauth
 
 import (
+	"crypto/md5"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -22,6 +23,7 @@ import (
 const (
 	authCallback = "/authcallback"
 	authPath     = "/auth"
+	tokenLength  = 15
 )
 
 type OAuth struct {
@@ -99,9 +101,9 @@ func (o *OAuth) CallbackHandler(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		log.Println(err)
 	} else {
-		token = generateRandomString(10)
-		log.Println("Random string gen: " + token)
 		ss := extractSessionSchemaFromGoth(user)
+		token = generateRandomStringFromEmail(ss.Email)
+		log.Println("Random string gen: " + token)
 		json, err := sessionSchemaToJson(ss)
 		if err != nil {
 			log.Println(err)
@@ -233,6 +235,19 @@ func parseSessionSchemaFromJson(tokenSession string) (*SessionSchema, error) {
 		return nil, err
 	}
 	return ss, nil
+}
+
+func generateRandomStringFromEmail(email string) string {
+	if len(email) < 1 {
+		return generateRandomString(tokenLength)
+	}
+	s := time.Now().Format("2006-01-02") + email
+	rs := fmt.Sprintf("%x", md5.Sum([]byte(s)))
+	if len(rs) >= tokenLength {
+		return rs[:tokenLength]
+	} else {
+		return rs
+	}
 }
 
 func generateRandomString(l int) string {
