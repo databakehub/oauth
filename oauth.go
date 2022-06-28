@@ -2,12 +2,14 @@ package oauth
 
 import (
 	"crypto/md5"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log"
 	"math/rand"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	rcfg "github.com/databakehub/rcfg-client-go"
@@ -174,6 +176,40 @@ func (x *OAuth) SetDbIdForToken(token string, dbId string) error {
 
 func (x *OAuth) AuthCheck(w http.ResponseWriter, req *http.Request) (*SessionSchema, error) {
 	token := req.Header.Get("Authorization")
+	if token == "" {
+		e := fmt.Errorf("no oauth token")
+		errorHttpForbidden(w, e)
+		return nil, e
+	}
+	ss, err := x.GetSessionSchema(token)
+	if err != nil {
+		log.Println("Auth check error: ", err)
+		e := fmt.Errorf("do I know you? " + err.Error())
+		errorHttpForbidden(w, e)
+		return nil, e
+	}
+	return ss, err
+}
+
+func (x *OAuth) BasicAuthCheck(w http.ResponseWriter, req *http.Request) (*SessionSchema, error) {
+	token := req.Header.Get("Authorization")
+	if token == "" {
+		token = req.Header.Get("authorization")
+	}
+	if token == "" {
+		return nil, fmt.Errorf("no authorization token")
+	}
+	token = strings.TrimPrefix(token, "Basic")
+	token = strings.TrimSpace(token)
+	// base64 decode
+	decoded, err := base64.StdEncoding.DecodeString(token)
+	if err != nil {
+		errorHttpForbidden(w, fmt.Errorf("could not parse token"))
+		return nil, err
+	}
+	decodedString := string(decoded)
+	token = strings.TrimPrefix(decodedString, "u:")
+	token = strings.TrimSpace(token)
 	if token == "" {
 		e := fmt.Errorf("no oauth token")
 		errorHttpForbidden(w, e)
