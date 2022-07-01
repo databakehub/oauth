@@ -37,6 +37,13 @@ type OAuth struct {
 	TTL         string
 }
 
+type Route struct {
+	Name        string
+	Method      string
+	Pattern     string
+	HandlerFunc http.HandlerFunc
+}
+
 type OAuthCredentials struct {
 	ClientId string
 	Secret   string
@@ -154,6 +161,39 @@ func (x *OAuth) SetupMuxRouter(r *mux.Router) {
 	r.HandleFunc("/auth/{provider}", x.AuthHandler).Methods("GET")
 	r.HandleFunc("/authcallback", x.CallbackHandler).Methods("GET")
 	r.HandleFunc("/authcheck/{token}", x.AuthCheckHandler).Methods("GET")
+}
+
+// Get routes to be used by the router
+//
+// Sample usage:
+//
+// router.
+//   Methods(route.Method).
+//   Path(route.Pattern).
+//   Name(route.Name).
+//   Handler(handler)
+
+func (x *OAuth) GetRoutes() []Route {
+	return []Route{
+		{
+			Name:        "ProviderAuth",
+			Method:      "GET",
+			Pattern:     authPath + "/{provider}",
+			HandlerFunc: x.AuthHandler,
+		},
+		{
+			Name:        "AuthCallback",
+			Method:      "GET",
+			Pattern:     authCallback,
+			HandlerFunc: x.CallbackHandler,
+		},
+		{
+			Name:        "AuthCheck",
+			Method:      "GET",
+			Pattern:     authPath + "/{token}",
+			HandlerFunc: x.AuthCheckHandler,
+		},
+	}
 }
 
 func (x *OAuth) SetDbIdForToken(token string, dbId string) error {
