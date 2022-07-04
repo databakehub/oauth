@@ -166,6 +166,10 @@ func (x *OAuth) SetupMuxRouter(r *mux.Router) {
 
 func extractGinHandlerFromHandler(f func(w http.ResponseWriter, req *http.Request)) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		p := c.Param("provider")
+		qc := c.Request.URL.Query()
+		qc.Set("provider", p)
+		c.Request.URL.RawQuery = qc.Encode()
 		f(c.Writer, c.Request)
 	}
 }
