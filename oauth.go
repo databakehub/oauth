@@ -13,6 +13,7 @@ import (
 	"time"
 
 	rcfg "github.com/databakehub/rcfg-client-go"
+	"github.com/gin-gonic/gin"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/securecookie"
 	"github.com/gorilla/sessions"
@@ -161,6 +162,18 @@ func (x *OAuth) SetupMuxRouter(r *mux.Router) {
 	r.HandleFunc("/auth/{provider}", x.AuthHandler).Methods("GET")
 	r.HandleFunc("/authcallback", x.CallbackHandler).Methods("GET")
 	r.HandleFunc("/authcheck/{token}", x.AuthCheckHandler).Methods("GET")
+}
+
+func extractGinHandlerFromHandler(f func(w http.ResponseWriter, req *http.Request)) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		f(c.Writer, c.Request)
+	}
+}
+
+func (x *OAuth) SetupGinRouter(r *gin.Engine) {
+	r.GET("/auth/:provider", extractGinHandlerFromHandler(x.AuthHandler))
+	r.GET("/authcallback", extractGinHandlerFromHandler(x.CallbackHandler))
+	r.GET("/authcheck/:token", extractGinHandlerFromHandler(x.AuthCheckHandler))
 }
 
 // Get routes to be used by the router
